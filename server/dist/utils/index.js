@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.generate_token = exports.find_main_word = exports.binary_search = exports.merge_sort = void 0;
+const merge_sort_1 = require("./merge_sort");
+Object.defineProperty(exports, "merge_sort", { enumerable: true, get: function () { return merge_sort_1.merge_sort; } });
+const binary_search_1 = require("./binary_search");
+Object.defineProperty(exports, "binary_search", { enumerable: true, get: function () { return binary_search_1.binary_search; } });
+const find_main_word_1 = require("./find_main_word");
+Object.defineProperty(exports, "find_main_word", { enumerable: true, get: function () { return find_main_word_1.find_main_word; } });
+const generate_token_1 = require("./generate_token");
+Object.defineProperty(exports, "generate_token", { enumerable: true, get: function () { return generate_token_1.generate_token; } });

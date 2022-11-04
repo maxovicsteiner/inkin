@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<style>
+		body{
+			margin: 0;
+			padding: 0;
+		}
+		.container{
+			margin: 0;
+			padding-block: 20px;
+			height: 100%;
+			width: 100%;
+			background-color: #121212;
+			font-family: Helvetica, Arial, sans-serif;
+			display: flex;
+			flex-direction: column;
+			font-size: 16px;
+			font-weight: bold;
+			gap: 50px;
+		}
+		.upper > img {
+			margin-bottom: 20px;
+		}
+		.upper{
+			margin: 0 auto;
+			display:  flex;
+			flex-direction: column;
+			color: #565656;
+		}
+		.upper > * {
+			margin: 0 auto;
+		}
+		.lower {
+			height: 60px;
+			background: linear-gradient(0deg, #A0A0A0, #ffffff);
+			margin: 0 auto;
+			display: flex;
+			border-radius: 5px;
+		}
+		.lower > p {
+			margin: auto;
+			font-size: 30px;
+			letter-spacing: 10px;
+			padding: 5px;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="upper">
+			<img width="200" src="logo.png">
+			<p style="color: #ddd !important;">Welcome example@email.com!</p>
+			<p>Kindly write the code below when prompted</p>
+		</div>
+		<div class="lower">
+			<p>123456</p>
+		</div>
+	</div>
+</body>
+</html>
