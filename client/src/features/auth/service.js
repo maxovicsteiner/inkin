@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const API_URL = "http://192.168.1.110:5000/api/auth";
+const local_ip = "192.168.1.1"; // Your local ip address
+const PORT = "5000";
+const API_URL = `http://${local_ip}:${PORT}/api/auth`;
 
 export async function registerHTTP({ email, password }) {
   const response = await axios.post(`${API_URL}/register`, {
