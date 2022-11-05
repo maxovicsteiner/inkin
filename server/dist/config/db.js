@@ -16,7 +16,7 @@ const mongoose_1 = __importDefault(require("mongoose"));
 function connectToDB() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const conn = yield mongoose_1.default.connect("mongodb://127.0.0.1:27017/inkin");
+            const conn = yield mongoose_1.default.connect(process.env.MONGO_DB_URI);
             console.log(`[DATABASE CONNECTED] - Mongo db connected`);
         }
         catch (error) {
