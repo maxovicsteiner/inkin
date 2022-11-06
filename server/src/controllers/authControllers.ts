@@ -332,12 +332,12 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
   // Creds are correct
 
   // Generate jwt
-  const token = generate_token({ id: user!._id.toString() });
+  const token = generate_token({ id: user._id.toString() });
 
   // Send user to frontend
 
   res.status(200).json({
-    id: user!._id,
+    id: user._id,
     points: user!.points,
     token: token,
   });
