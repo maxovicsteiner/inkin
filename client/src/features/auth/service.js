@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const local_ip = "192.168.1.1"; // Your local ip address
+const local_ip = "192.168.56.1"; // Your local ip address
 const PORT = "5000";
 const API_URL = `http://${local_ip}:${PORT}/api/auth`;
 

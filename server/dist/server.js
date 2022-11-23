@@ -9,6 +9,7 @@ const db_1 = __importDefault(require("./config/db"));
 const routes_1 = require("./routes");
 const errorHandler_1 = require("./middlewares/errorHandler");
 const cors_1 = __importDefault(require("cors"));
+const authMiddleware_1 = require("./middlewares/authMiddleware");
 (0, dotenv_1.config)();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
@@ -22,5 +23,8 @@ app.use(express_1.default.urlencoded({ extended: true }));
 // Routes
 const BASE_URL = "/api";
 app.use(BASE_URL + "/auth", routes_1.authRoutes);
+// Protected routes
+app.use(authMiddleware_1.protect);
+app.use(BASE_URL + "/posts", routes_1.postRoutes);
 // Error handler
 app.use(errorHandler_1.errorHandler);

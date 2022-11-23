@@ -1,9 +1,10 @@
 import express from "express";
 import { config } from "dotenv";
 import connectToDB from "./config/db";
-import { authRoutes } from "./routes";
+import { authRoutes, postRoutes } from "./routes";
 import { errorHandler } from "./middlewares/errorHandler";
 import cors from "cors";
+import { protect } from "./middlewares/authMiddleware";
 
 config();
 
@@ -25,6 +26,10 @@ app.use(express.urlencoded({ extended: true }));
 const BASE_URL = "/api";
 
 app.use(BASE_URL + "/auth", authRoutes);
+
+// Protected routes
+app.use(protect);
+app.use(BASE_URL + "/posts", postRoutes);
 
 // Error handler
 app.use(errorHandler);
