@@ -24,7 +24,7 @@ exports.protect = (0, express_async_handler_1.default)((req, res, next) => __awa
         if (decoded) {
             const user = yield User_1.default.findById(decoded.id);
             if (user) {
-                req.user = user;
+                req.user = user._id.toString();
                 next();
             }
             else {

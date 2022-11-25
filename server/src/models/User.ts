@@ -2,7 +2,7 @@ import { model, Schema, Model, Document } from "mongoose";
 import Post, { IPost } from "./Post";
 
 // Interface
-interface IUser extends Document {
+export interface IUser extends Document {
   email: string;
   password: string;
   following: string[];
