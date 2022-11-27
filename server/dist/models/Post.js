@@ -31,6 +31,10 @@ const postSchema = new mongoose_1.Schema({
         type: Number,
         default: 0,
     },
+    interacted: {
+        type: [[mongoose_1.Schema.Types.ObjectId]],
+        default: [[], []],
+    },
     configured: {
         type: Boolean,
         default: false,

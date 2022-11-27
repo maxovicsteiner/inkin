@@ -1,9 +1,15 @@
 import { Router } from "express";
 
-import { getPosts } from "../controllers/postsControllers";
+import {
+  createPost,
+  getPosts,
+  interactWithPost,
+} from "../controllers/postsControllers";
 
 const router = Router();
 
-router.get("/", getPosts);
+router.route("/").get(getPosts).post(createPost);
+
+router.route("/:puid").post(interactWithPost);
 
 export default router;

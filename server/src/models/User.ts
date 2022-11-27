@@ -15,8 +15,8 @@ export interface IUser extends Document {
 }
 
 export enum Actions {
-  Upvote,
   Downvote,
+  Upvote,
 }
 
 const userSchema: Schema<IUser, Model<IUser>> = new Schema<IUser, Model<IUser>>(
@@ -90,11 +90,36 @@ userSchema.methods.interact = async function (
 ): Promise<void> {
   try {
     const author = await this.model("User").findById(post.author);
+
     if (action === Actions.Downvote) {
-      post.likes--;
+      for (let i = 0; i < post.interacted[Actions.Downvote].length; i++) {
+        if (post.interacted[Actions.Downvote][i] == this._id.toString()) {
+          return;
+        }
+      }
+      post.interacted = [
+        [...post.interacted[Actions.Downvote], this._id.toString()],
+        [
+          ...post.interacted[Actions.Upvote].filter(
+            (user) => user != this._id.toString()
+          ),
+        ],
+      ];
       author.points -= 5;
     } else if (action === Actions.Upvote) {
-      post.likes++;
+      for (let i = 0; i < post.interacted[Actions.Upvote].length; i++) {
+        if (post.interacted[Actions.Upvote][i] == this._id.toString()) {
+          return;
+        }
+      }
+      post.interacted = [
+        [
+          ...post.interacted[Actions.Downvote].filter(
+            (user) => user != this._id.toString()
+          ),
+        ],
+        [...post.interacted[Actions.Upvote], this._id.toString()],
+      ];
       author.points += 5;
       if (post.main_word) {
         let interests: Set<string> = new Set(this.interests);
@@ -109,6 +134,9 @@ userSchema.methods.interact = async function (
         this.interests = temp;
       }
     }
+    post.likes =
+      post.interacted[Actions.Upvote].length -
+      post.interacted[Actions.Downvote].length;
     await post.save();
     await author.save();
     await this.save();

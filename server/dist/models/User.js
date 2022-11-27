@@ -17,8 +17,8 @@ const mongoose_1 = require("mongoose");
 const Post_1 = __importDefault(require("./Post"));
 var Actions;
 (function (Actions) {
-    Actions[Actions["Upvote"] = 0] = "Upvote";
-    Actions[Actions["Downvote"] = 1] = "Downvote";
+    Actions[Actions["Downvote"] = 0] = "Downvote";
+    Actions[Actions["Upvote"] = 1] = "Upvote";
 })(Actions = exports.Actions || (exports.Actions = {}));
 const userSchema = new mongoose_1.Schema({
     email: {
@@ -87,11 +87,31 @@ userSchema.methods.interact = function (post, action) {
         try {
             const author = yield this.model("User").findById(post.author);
             if (action === Actions.Downvote) {
-                post.likes--;
+                for (let i = 0; i < post.interacted[Actions.Downvote].length; i++) {
+                    if (post.interacted[Actions.Downvote][i] == this._id.toString()) {
+                        return;
+                    }
+                }
+                post.interacted = [
+                    [...post.interacted[Actions.Downvote], this._id.toString()],
+                    [
+                        ...post.interacted[Actions.Upvote].filter((user) => user != this._id.toString()),
+                    ],
+                ];
                 author.points -= 5;
             }
             else if (action === Actions.Upvote) {
-                post.likes++;
+                for (let i = 0; i < post.interacted[Actions.Upvote].length; i++) {
+                    if (post.interacted[Actions.Upvote][i] == this._id.toString()) {
+                        return;
+                    }
+                }
+                post.interacted = [
+                    [
+                        ...post.interacted[Actions.Downvote].filter((user) => user != this._id.toString()),
+                    ],
+                    [...post.interacted[Actions.Upvote], this._id.toString()],
+                ];
                 author.points += 5;
                 if (post.main_word) {
                     let interests = new Set(this.interests);
@@ -106,6 +126,9 @@ userSchema.methods.interact = function (post, action) {
                     this.interests = temp;
                 }
             }
+            post.likes =
+                post.interacted[Actions.Upvote].length -
+                    post.interacted[Actions.Downvote].length;
             yield post.save();
             yield author.save();
             yield this.save();

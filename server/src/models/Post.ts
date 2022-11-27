@@ -6,6 +6,7 @@ export interface IPost extends Document {
   text: string;
   main_word: string | null;
   likes: number;
+  interacted: Types.ObjectId[][];
   configured: boolean;
 }
 
@@ -38,6 +39,10 @@ const postSchema: Schema<IPost, Model<IPost>> = new Schema<IPost, Model<IPost>>(
     likes: {
       type: Number,
       default: 0,
+    },
+    interacted: {
+      type: [[Schema.Types.ObjectId]],
+      default: [[], []],
     },
     configured: {
       type: Boolean,
