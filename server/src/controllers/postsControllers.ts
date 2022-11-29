@@ -74,10 +74,24 @@ export const interactWithPost = asyncHandler(
       throw new Error("Post was not found");
     }
 
-    await user.interact(
-      post,
-      req.body.action_type === "0" ? Actions.Downvote : Actions.Upvote
-    );
+    switch (req.body.action_type) {
+      case "0":
+        // Downvote
+        await user.interact(post, Actions.Downvote);
+        break;
+      case "1":
+        // Upvote
+        await user.interact(post, Actions.Upvote);
+        break;
+      case "-1":
+        // Undo actions
+        await user.interact(post, Actions.Undo);
+        break;
+      default:
+        res.status(400);
+        throw new Error("An error happened");
+        break;
+    }
 
     res.status(200).json({ post });
   }

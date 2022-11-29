@@ -15,10 +15,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Actions = void 0;
 const mongoose_1 = require("mongoose");
 const Post_1 = __importDefault(require("./Post"));
+const INTEREST_ARRAY_LENGTH = 5;
+const FOLLOWING_ARRAY_LENGTH = 10;
 var Actions;
 (function (Actions) {
     Actions[Actions["Downvote"] = 0] = "Downvote";
     Actions[Actions["Upvote"] = 1] = "Upvote";
+    Actions[Actions["Undo"] = 2] = "Undo";
 })(Actions = exports.Actions || (exports.Actions = {}));
 const userSchema = new mongoose_1.Schema({
     email: {
@@ -55,7 +58,7 @@ userSchema.methods.follow = function (user) {
             }
             let temp = [...following]; // O(n)
             temp.unshift(user._id.toString()); // ...and add them to the beginning // O(n)
-            if (temp.length > 10) {
+            if (temp.length > FOLLOWING_ARRAY_LENGTH) {
                 temp.pop(); // No longer intersted in the last following... remove them (first in first out)  // O(1)
             }
             this.following = temp;
@@ -72,6 +75,18 @@ userSchema.methods.create_post = function (text) {
             const post = yield Post_1.default.create({ author: this._id, text });
             if (post) {
                 this.points += 20;
+                if (post.main_word) {
+                    let interests = new Set(this.interests);
+                    if (interests.has(post.main_word)) {
+                        interests.delete(post.main_word);
+                    }
+                    let temp = [...interests];
+                    temp.unshift(post.main_word);
+                    if (temp.length > INTEREST_ARRAY_LENGTH) {
+                        temp.pop();
+                    }
+                    this.interests = temp;
+                }
                 yield this.save();
                 return post;
             }
@@ -86,45 +101,59 @@ userSchema.methods.interact = function (post, action) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const author = yield this.model("User").findById(post.author);
-            if (action === Actions.Downvote) {
-                for (let i = 0; i < post.interacted[Actions.Downvote].length; i++) {
-                    if (post.interacted[Actions.Downvote][i] == this._id.toString()) {
-                        return;
+            switch (+action // Conversion from string to numbers https://stackoverflow.com/questions/27747437/typescript-enum-switch-not-working
+            ) {
+                case Actions.Downvote:
+                    for (let i = 0; i < post.interacted[Actions.Downvote].length; i++) {
+                        if (post.interacted[Actions.Downvote][i] == this._id.toString()) {
+                            return;
+                        }
                     }
-                }
-                post.interacted = [
-                    [...post.interacted[Actions.Downvote], this._id.toString()],
-                    [
-                        ...post.interacted[Actions.Upvote].filter((user) => user != this._id.toString()),
-                    ],
-                ];
-                author.points -= 5;
-            }
-            else if (action === Actions.Upvote) {
-                for (let i = 0; i < post.interacted[Actions.Upvote].length; i++) {
-                    if (post.interacted[Actions.Upvote][i] == this._id.toString()) {
-                        return;
+                    post.interacted = [
+                        [...post.interacted[Actions.Downvote], this._id.toString()],
+                        [
+                            ...post.interacted[Actions.Upvote].filter((user) => user != this._id.toString()),
+                        ],
+                    ];
+                    author.points -= 5;
+                    break;
+                case Actions.Upvote:
+                    for (let i = 0; i < post.interacted[Actions.Upvote].length; i++) {
+                        if (post.interacted[Actions.Upvote][i] == this._id.toString()) {
+                            return;
+                        }
                     }
-                }
-                post.interacted = [
-                    [
-                        ...post.interacted[Actions.Downvote].filter((user) => user != this._id.toString()),
-                    ],
-                    [...post.interacted[Actions.Upvote], this._id.toString()],
-                ];
-                author.points += 5;
-                if (post.main_word) {
-                    let interests = new Set(this.interests);
-                    if (interests.has(post.main_word)) {
-                        interests.delete(post.main_word);
+                    post.interacted = [
+                        [
+                            ...post.interacted[Actions.Downvote].filter((user) => user != this._id.toString()),
+                        ],
+                        [...post.interacted[Actions.Upvote], this._id.toString()],
+                    ];
+                    author.points += 5;
+                    if (post.main_word) {
+                        let interests = new Set(this.interests);
+                        if (interests.has(post.main_word)) {
+                            interests.delete(post.main_word);
+                        }
+                        let temp = [...interests];
+                        temp.unshift(post.main_word);
+                        if (temp.length > INTEREST_ARRAY_LENGTH) {
+                            temp.pop();
+                        }
+                        this.interests = temp;
                     }
-                    let temp = [...interests];
-                    temp.unshift(post.main_word);
-                    if (temp.length > 5) {
-                        temp.pop();
-                    }
-                    this.interests = temp;
-                }
+                    break;
+                case Actions.Undo:
+                    // Remove like/dislike
+                    post.interacted = [
+                        [
+                            ...post.interacted[Actions.Downvote].filter((user) => user != this._id.toString()),
+                        ],
+                        [
+                            ...post.interacted[Actions.Upvote].filter((user) => user != this._id.toString()),
+                        ],
+                    ];
+                    break;
             }
             post.likes =
                 post.interacted[Actions.Upvote].length -

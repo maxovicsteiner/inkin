@@ -1,6 +1,9 @@
 import { model, Schema, Model, Document } from "mongoose";
 import Post, { IPost } from "./Post";
 
+const INTEREST_ARRAY_LENGTH: number = 5;
+const FOLLOWING_ARRAY_LENGTH: number = 10;
+
 // Interface
 export interface IUser extends Document {
   email: string;
@@ -17,6 +20,7 @@ export interface IUser extends Document {
 export enum Actions {
   Downvote,
   Upvote,
+  Undo,
 }
 
 const userSchema: Schema<IUser, Model<IUser>> = new Schema<IUser, Model<IUser>>(
@@ -58,7 +62,7 @@ userSchema.methods.follow = async function (user: IUser): Promise<void> {
     let temp: string[] = [...following]; // O(n)
     temp.unshift(user._id.toString()); // ...and add them to the beginning // O(n)
 
-    if (temp.length > 10) {
+    if (temp.length > FOLLOWING_ARRAY_LENGTH) {
       temp.pop(); // No longer intersted in the last following... remove them (first in first out)  // O(1)
     }
     this.following = temp;
@@ -75,6 +79,18 @@ userSchema.methods.create_post = async function (
     const post = await Post.create({ author: this._id, text });
     if (post) {
       this.points += 20;
+      if (post.main_word) {
+        let interests: Set<string> = new Set(this.interests);
+        if (interests.has(post.main_word)) {
+          interests.delete(post.main_word);
+        }
+        let temp: string[] = [...interests];
+        temp.unshift(post.main_word);
+        if (temp.length > INTEREST_ARRAY_LENGTH) {
+          temp.pop();
+        }
+        this.interests = temp;
+      }
       await this.save();
       return post;
     }
@@ -91,49 +107,70 @@ userSchema.methods.interact = async function (
   try {
     const author = await this.model("User").findById(post.author);
 
-    if (action === Actions.Downvote) {
-      for (let i = 0; i < post.interacted[Actions.Downvote].length; i++) {
-        if (post.interacted[Actions.Downvote][i] == this._id.toString()) {
-          return;
+    switch (
+      +action // Conversion from string to numbers https://stackoverflow.com/questions/27747437/typescript-enum-switch-not-working
+    ) {
+      case Actions.Downvote:
+        for (let i = 0; i < post.interacted[Actions.Downvote].length; i++) {
+          if (post.interacted[Actions.Downvote][i] == this._id.toString()) {
+            return;
+          }
         }
-      }
-      post.interacted = [
-        [...post.interacted[Actions.Downvote], this._id.toString()],
-        [
-          ...post.interacted[Actions.Upvote].filter(
-            (user) => user != this._id.toString()
-          ),
-        ],
-      ];
-      author.points -= 5;
-    } else if (action === Actions.Upvote) {
-      for (let i = 0; i < post.interacted[Actions.Upvote].length; i++) {
-        if (post.interacted[Actions.Upvote][i] == this._id.toString()) {
-          return;
+        post.interacted = [
+          [...post.interacted[Actions.Downvote], this._id.toString()],
+          [
+            ...post.interacted[Actions.Upvote].filter(
+              (user) => user != this._id.toString()
+            ),
+          ],
+        ];
+        author.points -= 5;
+        break;
+      case Actions.Upvote:
+        for (let i = 0; i < post.interacted[Actions.Upvote].length; i++) {
+          if (post.interacted[Actions.Upvote][i] == this._id.toString()) {
+            return;
+          }
         }
-      }
-      post.interacted = [
-        [
-          ...post.interacted[Actions.Downvote].filter(
-            (user) => user != this._id.toString()
-          ),
-        ],
-        [...post.interacted[Actions.Upvote], this._id.toString()],
-      ];
-      author.points += 5;
-      if (post.main_word) {
-        let interests: Set<string> = new Set(this.interests);
-        if (interests.has(post.main_word)) {
-          interests.delete(post.main_word);
+        post.interacted = [
+          [
+            ...post.interacted[Actions.Downvote].filter(
+              (user) => user != this._id.toString()
+            ),
+          ],
+          [...post.interacted[Actions.Upvote], this._id.toString()],
+        ];
+        author.points += 5;
+        if (post.main_word) {
+          let interests: Set<string> = new Set(this.interests);
+          if (interests.has(post.main_word)) {
+            interests.delete(post.main_word);
+          }
+          let temp: string[] = [...interests];
+          temp.unshift(post.main_word);
+          if (temp.length > INTEREST_ARRAY_LENGTH) {
+            temp.pop();
+          }
+          this.interests = temp;
         }
-        let temp: string[] = [...interests];
-        temp.unshift(post.main_word);
-        if (temp.length > 5) {
-          temp.pop();
-        }
-        this.interests = temp;
-      }
+        break;
+      case Actions.Undo:
+        // Remove like/dislike
+        post.interacted = [
+          [
+            ...post.interacted[Actions.Downvote].filter(
+              (user) => user != this._id.toString()
+            ),
+          ],
+          [
+            ...post.interacted[Actions.Upvote].filter(
+              (user) => user != this._id.toString()
+            ),
+          ],
+        ];
+        break;
     }
+
     post.likes =
       post.interacted[Actions.Upvote].length -
       post.interacted[Actions.Downvote].length;

@@ -68,6 +68,23 @@ exports.interactWithPost = (0, express_async_handler_1.default)((req, res) => __
         res.status(400);
         throw new Error("Post was not found");
     }
-    yield user.interact(post, req.body.action_type === "0" ? User_2.Actions.Downvote : User_2.Actions.Upvote);
+    switch (req.body.action_type) {
+        case "0":
+            // Downvote
+            yield user.interact(post, User_2.Actions.Downvote);
+            break;
+        case "1":
+            // Upvote
+            yield user.interact(post, User_2.Actions.Upvote);
+            break;
+        case "-1":
+            // Undo actions
+            yield user.interact(post, User_2.Actions.Undo);
+            break;
+        default:
+            res.status(400);
+            throw new Error("An error happened");
+            break;
+    }
     res.status(200).json({ post });
 }));
