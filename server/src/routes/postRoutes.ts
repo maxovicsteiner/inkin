@@ -4,12 +4,13 @@ import {
   createPost,
   getPosts,
   interactWithPost,
+  postDetails,
 } from "../controllers/postsControllers";
 
 const router = Router();
 
 router.route("/").get(getPosts).post(createPost);
 
-router.route("/:puid").post(interactWithPost);
+router.route("/:puid").get(postDetails).post(interactWithPost);
 
 export default router;

@@ -1,4 +1,4 @@
-import { model, Schema, Model, Document } from "mongoose";
+import { model, Schema, Model, Document, Types } from "mongoose";
 import Post, { IPost } from "./Post";
 
 const INTEREST_ARRAY_LENGTH: number = 5;
@@ -11,15 +11,18 @@ export interface IUser extends Document {
   following: string[];
   interests: string[];
   points: number;
+  followers: number;
+  favorite_posts: Types.ObjectId[];
   follow: (user: IUser) => void;
   not_interested: (post: IPost) => void;
-  interact: (post: IPost, action: Actions) => void;
+  interact: (post: IPost, action: Actions, options?: Actions) => void;
   create_post: (text: string) => IPost;
 }
 
 export enum Actions {
   Downvote,
   Upvote,
+  Favorite,
   Undo,
 }
 
@@ -46,13 +49,41 @@ const userSchema: Schema<IUser, Model<IUser>> = new Schema<IUser, Model<IUser>>(
       type: Number,
       default: 0,
     },
+    favorite_posts: {
+      type: [Schema.Types.ObjectId],
+      default: [],
+    },
+    followers: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
 
+userSchema.pre("save", async function (): Promise<void> {
+  let points: number = 0;
+  const posts = await Post.find({ author: this._id.toString() });
+
+  posts.forEach((post) => {
+    // add 5 points for every like
+    // substract 5 points for every dislike
+    // add 5 points for every favorite
+    points +=
+      (post.interacted[Actions.Upvote].length +
+        post.interacted[Actions.Favorite].length) *
+        5 -
+      post.interacted[Actions.Downvote].length * 5;
+  });
+  // add 10 points for every follow
+  points += this.followers * 10;
+
+  this.points = points;
+});
+
 userSchema.methods.follow = async function (user: IUser): Promise<void> {
   try {
-    user.points += 10;
+    user.followers += 1;
     await user.save();
     let following: Set<string> = new Set(this.following);
     if (following.has(user._id.toString())) {
@@ -63,7 +94,10 @@ userSchema.methods.follow = async function (user: IUser): Promise<void> {
     temp.unshift(user._id.toString()); // ...and add them to the beginning // O(n)
 
     if (temp.length > FOLLOWING_ARRAY_LENGTH) {
-      temp.pop(); // No longer intersted in the last following... remove them (first in first out)  // O(1)
+      let id = temp.pop(); // No longer intersted in the last following... remove them (first in first out)  // O(1)
+      const author = await this.model("User").findById(id);
+      author.followers -= 1;
+      await author.save();
     }
     this.following = temp;
     await this.save();
@@ -78,7 +112,6 @@ userSchema.methods.create_post = async function (
   try {
     const post = await Post.create({ author: this._id, text });
     if (post) {
-      this.points += 20;
       if (post.main_word) {
         let interests: Set<string> = new Set(this.interests);
         if (interests.has(post.main_word)) {
@@ -102,7 +135,8 @@ userSchema.methods.create_post = async function (
 
 userSchema.methods.interact = async function (
   post: IPost,
-  action: Actions
+  action: Actions,
+  options?: Actions
 ): Promise<void> {
   try {
     const author = await this.model("User").findById(post.author);
@@ -123,8 +157,8 @@ userSchema.methods.interact = async function (
               (user) => user != this._id.toString()
             ),
           ],
+          [...post.interacted[Actions.Favorite]],
         ];
-        author.points -= 5;
         break;
       case Actions.Upvote:
         for (let i = 0; i < post.interacted[Actions.Upvote].length; i++) {
@@ -139,8 +173,8 @@ userSchema.methods.interact = async function (
             ),
           ],
           [...post.interacted[Actions.Upvote], this._id.toString()],
+          [...post.interacted[Actions.Favorite]],
         ];
-        author.points += 5;
         if (post.main_word) {
           let interests: Set<string> = new Set(this.interests);
           if (interests.has(post.main_word)) {
@@ -154,26 +188,81 @@ userSchema.methods.interact = async function (
           this.interests = temp;
         }
         break;
-      case Actions.Undo:
-        // Remove like/dislike
+      case Actions.Favorite:
+        let added_to_favorites: boolean = false;
+        if (
+          this.favorite_posts.length < post.interacted[Actions.Favorite].length
+        ) {
+          user_loop: for (let i = 0; i < this.favorite_posts.length; i++) {
+            if (post._id.toString() == this.favorite_posts[i]) {
+              added_to_favorites = true;
+              break user_loop;
+            }
+          }
+        } else {
+          post_loop: for (
+            let i = 0;
+            i < post.interacted[Actions.Favorite].length;
+            i++
+          ) {
+            if (post.interacted[Actions.Favorite][i] == this._id.toString()) {
+              added_to_favorites = true;
+              break post_loop;
+            }
+          }
+        }
+        if (added_to_favorites) {
+          break;
+        }
+
+        this.favorite_posts = [...this.favorite_posts, post._id.toString()];
         post.interacted = [
-          [
-            ...post.interacted[Actions.Downvote].filter(
-              (user) => user != this._id.toString()
-            ),
-          ],
-          [
-            ...post.interacted[Actions.Upvote].filter(
-              (user) => user != this._id.toString()
-            ),
-          ],
+          [...post.interacted[Actions.Downvote]],
+          [...post.interacted[Actions.Upvote]],
+          [...post.interacted[Actions.Favorite], this._id.toString()],
         ];
+
+        break;
+      case Actions.Undo:
+        // Remove like/dislike/favorite
+        if (options === Actions.Favorite) {
+          post.interacted = [
+            [...post.interacted[Actions.Downvote]],
+            [...post.interacted[Actions.Upvote]],
+            [
+              ...post.interacted[Actions.Favorite].filter(
+                (user) => user.toString() != this._id.toString()
+              ),
+            ],
+          ];
+          for (let i = 0; i < this.favorite_posts.length; i++) {
+            if (this.favorite_posts[i] == post._id.toString()) {
+              this.favorite_posts.splice(i, 1);
+            }
+          }
+        } else {
+          post.interacted = [
+            [
+              ...post.interacted[Actions.Downvote].filter(
+                (user) => user != this._id.toString()
+              ),
+            ],
+            [
+              ...post.interacted[Actions.Upvote].filter(
+                (user) => user != this._id.toString()
+              ),
+            ],
+            [...post.interacted[Actions.Favorite]],
+          ];
+        }
+
         break;
     }
 
     post.likes =
       post.interacted[Actions.Upvote].length -
       post.interacted[Actions.Downvote].length;
+    post.favorites = post.interacted[Actions.Favorite].length;
     await post.save();
     await author.save();
     await this.save();

@@ -8,6 +8,7 @@ export interface IPost extends Document {
   likes: number;
   interacted: Types.ObjectId[][];
   configured: boolean;
+  favorites: number;
 }
 
 // this is temporary - Load from https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt
@@ -42,7 +43,7 @@ const postSchema: Schema<IPost, Model<IPost>> = new Schema<IPost, Model<IPost>>(
     },
     interacted: {
       type: [[Schema.Types.ObjectId]],
-      default: [[], []],
+      default: [[], [], []],
     },
     configured: {
       type: Boolean,

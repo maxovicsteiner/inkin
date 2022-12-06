@@ -33,7 +33,7 @@ const postSchema = new mongoose_1.Schema({
     },
     interacted: {
         type: [[mongoose_1.Schema.Types.ObjectId]],
-        default: [[], []],
+        default: [[], [], []],
     },
     configured: {
         type: Boolean,
