@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.postDetails = exports.interactWithPost = exports.createPost = exports.getPosts = void 0;
+exports.follow = exports.postDetails = exports.interactWithPost = exports.createPost = exports.getPosts = void 0;
 const express_async_handler_1 = __importDefault(require("express-async-handler"));
 const User_1 = __importDefault(require("../models/User"));
 const Post_1 = __importDefault(require("../models/Post"));
@@ -106,4 +106,23 @@ exports.postDetails = (0, express_async_handler_1.default)((req, res) => __await
         throw new Error("Post was not found");
     }
     res.status(200).json({ post });
+}));
+exports.follow = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const current_user = yield User_1.default.findById(req.user);
+    if (!current_user) {
+        res.status(401);
+        throw new Error("Authorization error");
+    }
+    const post = yield Post_1.default.findById(req.body.post);
+    if (!post) {
+        res.status(400);
+        throw new Error("Post was not found");
+    }
+    const author = yield User_1.default.findById(post.author);
+    if (!author) {
+        res.status(400);
+        throw new Error("An error occured");
+    }
+    yield current_user.follow(author);
+    res.status(200).json({ message: "Success" });
 }));

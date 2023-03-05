@@ -124,3 +124,30 @@ export const postDetails = asyncHandler(async (req: Request, res: Response) => {
 
   res.status(200).json({ post });
 });
+
+export const follow = asyncHandler(async (req: Request, res: Response) => {
+  const current_user = await User.findById(req.user);
+
+  if (!current_user) {
+    res.status(401);
+    throw new Error("Authorization error");
+  }
+
+  const post = await Post.findById(req.body.post);
+
+  if (!post) {
+    res.status(400);
+    throw new Error("Post was not found");
+  }
+
+  const author = await User.findById(post.author);
+
+  if (!author) {
+    res.status(400);
+    throw new Error("An error occured");
+  }
+
+  await current_user.follow(author);
+
+  res.status(200).json({ message: "Success" });
+});
