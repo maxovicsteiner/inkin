@@ -166,6 +166,7 @@ export const registerUser = asyncHandler(
             text-align: center;
             font-size: 30px;
             letter-spacing: 10px;
+            text-indent: 10px;
             padding: 5px;
             padding-left: 10px;
           }
